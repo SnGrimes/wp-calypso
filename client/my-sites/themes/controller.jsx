@@ -66,7 +66,6 @@ export function loggedIn( context, next ) {
 
 	const Component = context.params.site_id ? SingleSiteComponent : MultiSiteComponent;
 	context.primary = <Component { ...getProps( context ) } />;
-
 	next();
 }
 
@@ -75,10 +74,10 @@ export function loggedOut( context, next ) {
 		// Don't server-render URLs with query params
 		return next();
 	}
-
 	const props = getProps( context );
-
 	context.primary = <LoggedOutComponent { ...props } />;
+	// eslint-disable-next-line
+	console.log( 'context.lang', context.lang );
 	next();
 }
 

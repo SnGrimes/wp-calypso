@@ -162,8 +162,8 @@ export function serverRender( req, res ) {
 		config.isEnabled( 'server-side-rendering' ) &&
 		context.layout &&
 		! context.user &&
-		cacheKey &&
-		isDefaultLocale( context.lang )
+		cacheKey // &&
+		//isDefaultLocale( context.lang )
 	) {
 		context.renderedLayout = render(
 			context.layout,

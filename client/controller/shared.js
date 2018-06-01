@@ -67,7 +67,8 @@ export function setUpLocale( context, next ) {
 	} else if ( currentUser ) {
 		context.lang = currentUser.localeSlug;
 	}
-
+// eslint-disable-next-line
+console.log( 'setUpLocale', context.lang );
 	context.store.dispatch( setLocale( context.lang || config( 'i18n_default_locale_slug' ) ) );
 
 	loadSectionCSS( context, next );

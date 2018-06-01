@@ -10,8 +10,9 @@ import crypto from 'crypto';
 import { execSync } from 'child_process';
 import cookieParser from 'cookie-parser';
 import debugFactory from 'debug';
-import { get, includes, pick, flatten, forEach, intersection, snakeCase } from 'lodash';
+import { get, includes, pick, flatten, forEach, intersection, snakeCase, startsWith } from 'lodash';
 import bodyParser from 'body-parser';
+import vhost from 'vhost';
 
 /**
  * Internal dependencies
@@ -30,6 +31,7 @@ import { login } from 'lib/paths';
 import { logSectionResponseTime } from './analytics';
 import { setCurrentUserOnReduxStore } from 'lib/redux-helpers';
 import analytics from '../lib/analytics';
+import { getLanguage } from 'lib/i18n-utils';
 
 const debug = debugFactory( 'calypso:pages' );
 
@@ -172,7 +174,7 @@ function getAcceptedLanguagesFromHeader( header ) {
 }
 
 function getDefaultContext( request ) {
-	let initialServerState = {};
+	let initialServerState = {}, sectionCss, lang = config( 'i18n_default_locale_slug' );
 	const bodyClasses = [];
 	// We don't compare context.query against a whitelist here. Whitelists are route-specific,
 	// i.e. they can be created by route-specific middleware. `getDefaultContext` is always
@@ -181,7 +183,6 @@ function getDefaultContext( request ) {
 	const cacheKey = getNormalizedPath( request.pathname, request.query );
 	const geoLocation = ( request.headers[ 'x-geoip-country-code' ] || '' ).toLowerCase();
 	const isDebug = calypsoEnv === 'development' || request.query.debug !== undefined;
-	let sectionCss;
 
 	if ( cacheKey ) {
 		const serializeCachedServerState = stateCache.get( cacheKey ) || {};
@@ -204,6 +205,10 @@ function getDefaultContext( request ) {
 		sectionCss = request.context.sectionCss;
 	}
 
+	if ( request.context && request.context.lang ) {
+		lang = request.context.lang;
+	}
+
 	const context = Object.assign( {}, request.context, {
 		commitSha: process.env.hasOwnProperty( 'COMMIT_SHA' ) ? process.env.COMMIT_SHA : '(unknown)',
 		compileDebug: process.env.NODE_ENV === 'development',
@@ -214,7 +219,7 @@ function getDefaultContext( request ) {
 		isRTL: config( 'rtl' ),
 		isDebug,
 		badge: false,
-		lang: config( 'i18n_default_locale_slug' ),
+		lang,
 		entrypoint: getAssets().entrypoints.build.assets.filter(
 			asset => ! asset.startsWith( 'manifest' )
 		),
@@ -474,6 +479,26 @@ function render404( request, response ) {
 	response.status( 404 ).send( renderJsx( '404', ctx ) );
 }
 
+function handleLangSlugSubDomains() {
+	return vhost( '*.wordpress.com', function( req, res, next ) {
+		if ( ! req.cookies.wordpress_logged_in && startsWith( req.path, '/themes' ) ) {
+			const language = getLanguage( req.vhost[0] );
+			if ( language && language.langSlug ) {
+				// eslint-disable-next-line
+				console.log( 'req.vhost[0]', req.vhost[0], language.langSlug );
+				req.context = Object.assign( {}, req.context, { lang: language.langSlug } );
+			}
+			next();
+		} else {
+			const protocol = req.get( 'X-Forwarded-Proto' ) === 'https' ? 'https' : 'http';
+			const port = process.env.PORT || config( 'port' );
+			const host = process.env.HOST || config( 'hostname' );
+			const redirectUrl = `${ protocol }://${ host }${ ( port ? `:${ port }` : '' ) }${ req.originalUrl }`;
+			res.redirect( redirectUrl );
+		}
+	} );
+}
+
 module.exports = function() {
 	const app = express();
 
@@ -481,6 +506,8 @@ module.exports = function() {
 
 	app.use( logSectionResponseTime );
 	app.use( cookieParser() );
+
+	app.use( handleLangSlugSubDomains() );
 
 	// redirect homepage if the Reader is disabled
 	app.get( '/', function( request, response, next ) {
