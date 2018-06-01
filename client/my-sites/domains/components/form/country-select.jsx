@@ -10,7 +10,6 @@ import { localize } from 'i18n-calypso';
 import classNames from 'classnames';
 import { isEmpty } from 'lodash';
 import ReactDom from 'react-dom';
-import observe from 'lib/mixins/data-observe';
 
 /**
  * Internal dependencies
@@ -23,8 +22,6 @@ import FormSelect from 'components/forms/form-select';
 
 const CountrySelect = createReactClass( {
 	displayName: 'CountrySelect',
-
-	mixins: [ observe( 'countriesList' ) ],
 
 	recordCountrySelectClick() {
 		if ( this.props.eventFormName ) {
@@ -42,8 +39,10 @@ const CountrySelect = createReactClass( {
 	},
 
 	render() {
+		const { countriesList } = this.props;
+
 		const classes = classNames( this.props.additionalClasses, 'country' );
-		const countriesList = this.props.countriesList.get();
+
 		let options = [];
 		let { value } = this.props;
 		value = value || '';
@@ -52,7 +51,7 @@ const CountrySelect = createReactClass( {
 			options.push( {
 				key: 'loading',
 				label: this.props.translate( 'Loading…' ),
-				disabled: 'disabled',
+				disabled: false,
 			} );
 		} else {
 			options = options.concat( [

@@ -24,23 +24,24 @@ import { localize } from 'i18n-calypso';
 /**
  * Internal dependencies
  */
-import { getCountryStates } from 'state/country-states/selectors';
-import { CountrySelect, Input, HiddenInput } from 'my-sites/domains/components/form';
+import analytics from 'lib/analytics';
+import FormButton from 'components/forms/form-button';
 import FormFieldset from 'components/forms/form-fieldset';
 import FormFooter from 'my-sites/domains/domain-management/components/form-footer';
-import FormButton from 'components/forms/form-button';
 import FormPhoneMediaInput from 'components/forms/form-phone-media-input';
-import { countries } from 'components/phone-input/data';
-import { forDomainRegistrations as countriesList } from 'lib/countries-list';
 import formState from 'lib/form-state';
-import analytics from 'lib/analytics';
-import { tryToGuessPostalCodeFormat } from 'lib/postal-code';
-import { toIcannFormat } from 'components/phone-input/phone-number';
-import NoticeErrorMessage from 'my-sites/checkout/checkout/notice-error-message';
 import GAppsFieldset from 'components/domains/contact-details-form-fields/custom-form-fieldsets/g-apps-fieldset';
-import RegionAddressFieldsets from 'components/domains/contact-details-form-fields/custom-form-fieldsets/region-address-fieldsets';
+import getCountries from 'state/selectors/get-countries';
+import NoticeErrorMessage from 'my-sites/checkout/checkout/notice-error-message';
 import notices from 'notices';
+import QueryDomainCountries from 'components/data/query-countries/domains';
+import RegionAddressFieldsets from 'components/domains/contact-details-form-fields/custom-form-fieldsets/region-address-fieldsets';
 import { CALYPSO_CONTACT } from 'lib/url/support';
+import { countries } from 'components/phone-input/data';
+import { CountrySelect, Input, HiddenInput } from 'my-sites/domains/components/form';
+import { getCountryStates } from 'state/country-states/selectors';
+import { toIcannFormat } from 'components/phone-input/phone-number';
+import { tryToGuessPostalCodeFormat } from 'lib/postal-code';
 import {
 	CHECKOUT_EU_ADDRESS_FORMAT_COUNTRY_CODES,
 	CHECKOUT_UK_ADDRESS_FORMAT_COUNTRY_CODES,
@@ -70,6 +71,7 @@ export class ContactDetailsFormFields extends Component {
 				...CONTACT_DETAILS_FORM_FIELDS.map( field => ( { [ field ]: PropTypes.string } ) )
 			)
 		).isRequired,
+		countriesList: PropTypes.array.isRequired,
 		needsFax: PropTypes.bool,
 		getIsFieldDisabled: PropTypes.func,
 		onContactDetailsChange: PropTypes.func,
@@ -124,6 +126,7 @@ export class ContactDetailsFormFields extends Component {
 		return (
 			! isEqual( nextState.form, this.state.form ) ||
 			! isEqual( nextProps.labelTexts, this.props.labelTexts ) ||
+			! isEqual( nextProps.countriesList, this.props.countriesList ) ||
 			! isEqual( nextProps.hasCountryStates, this.props.hasCountryStates ) ||
 			( nextProps.needsFax !== this.props.needsFax ||
 				nextProps.disableSubmitButton !== this.props.disableSubmitButton ||
@@ -371,10 +374,11 @@ export class ContactDetailsFormFields extends Component {
 					label: translate( 'Email' ),
 				} ) }
 
+				<QueryDomainCountries />
 				{ this.createField( 'phone', FormPhoneMediaInput, {
 					label: translate( 'Phone' ),
 					onChange: this.handlePhoneChange,
-					countriesList,
+					countriesList: this.props.countriesList,
 					countryCode: this.state.phoneCountryCode,
 					enableStickyCountry: false,
 				} ) }
@@ -389,7 +393,7 @@ export class ContactDetailsFormFields extends Component {
 					CountrySelect,
 					{
 						label: translate( 'Country' ),
-						countriesList,
+						countriesList: this.props.countriesList,
 					},
 					true
 				) }
@@ -462,6 +466,7 @@ export default connect( ( state, props ) => {
 			: false;
 	return {
 		countryCode,
+		countriesList: getCountries( state, 'domains' ),
 		hasCountryStates,
 	};
 } )( localize( ContactDetailsFormFields ) );
