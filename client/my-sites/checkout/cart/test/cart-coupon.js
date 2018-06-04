@@ -34,6 +34,7 @@ const props = {
 
 const event = {
 	preventDefault: identity,
+	stopPropagation: identity,
 };
 
 describe( 'cart-coupon', () => {
